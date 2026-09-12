@@ -79,6 +79,76 @@ class TestReviewEndpointAuth(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(len(self.fake_resend.sent), 0)
 
+    def test_reject_with_correct_token_marks_rejected_and_does_not_send(self):
+        response = self.client.post(
+            f"/review/{self.edition.id}/reject", params={"token": "segredo-de-teste"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "rejected")
+        self.assertEqual(len(self.fake_resend.sent), 0)
+
+    def test_reject_with_wrong_token_does_not_reject(self):
+        response = self.client.post(f"/review/{self.edition.id}/reject", params={"token": "errado"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_approving_an_already_rejected_edition_is_rejected_with_409(self):
+        self.client.post(f"/review/{self.edition.id}/reject", params={"token": "segredo-de-teste"})
+
+        response = self.client.post(
+            f"/review/{self.edition.id}/approve", params={"token": "segredo-de-teste"}
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(len(self.fake_resend.sent), 0)
+
+    def test_review_page_html_shows_pending_draft_with_both_actions(self):
+        response = self.client.get(
+            "/review/page",
+            params={"token": "segredo-de-teste"},
+            headers={"Accept": "text/html"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("Assunto", response.text)
+        self.assertIn(f'action="{self.edition.id}/approve?token=segredo-de-teste"', response.text)
+        self.assertIn(f'action="{self.edition.id}/reject?token=segredo-de-teste"', response.text)
+
+    def test_review_page_html_reports_no_pending_draft(self):
+        self.client.post(f"/review/{self.edition.id}/reject", params={"token": "segredo-de-teste"})
+
+        response = self.client.get(
+            "/review/page",
+            params={"token": "segredo-de-teste"},
+            headers={"Accept": "text/html"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Nenhum draft", response.text)
+
+    def test_review_page_requires_correct_token(self):
+        response = self.client.get("/review/page", params={"token": "errado"})
+        self.assertEqual(response.status_code, 401)
+
+    def test_approve_via_html_form_returns_confirmation_page_not_json(self):
+        response = self.client.post(
+            f"/review/{self.edition.id}/approve",
+            params={"token": "segredo-de-teste"},
+            headers={"Accept": "text/html"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("enviada", response.text)
+
+    def test_reject_via_html_form_returns_confirmation_page_not_json(self):
+        response = self.client.post(
+            f"/review/{self.edition.id}/reject",
+            params={"token": "segredo-de-teste"},
+            headers={"Accept": "text/html"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertIn("rejeitada", response.text)
+
 
 if __name__ == "__main__":
     unittest.main()

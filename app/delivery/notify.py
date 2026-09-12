@@ -14,6 +14,8 @@ def notify_draft_ready(edition: Edition, owner_email: str | None = None) -> None
     if not owner_email:
         return  # sem destinatário configurado, não há o que notificar
 
-    review_url = f"{settings.review_base_url}/review/pending?token={settings.review_secret_token}"
+    # /review/page (não /review/pending): a versão HTML com botões de
+    # Aprovar/Rejeitar, clicável direto no e-mail — ver app/api/review_html.py.
+    review_url = f"{settings.review_base_url}/review/page?token={settings.review_secret_token}"
     resend_client = dependencies.build_resend_client()
     resend_client.send_draft_ready_notification(owner_email, review_url, edition.edition_date)

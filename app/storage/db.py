@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS editions (
     edition_date TEXT NOT NULL UNIQUE,
     subject TEXT,
     body TEXT,
-    status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'incomplete', 'approved', 'sent')),
+    status TEXT NOT NULL DEFAULT 'draft'
+        CHECK (status IN ('draft', 'incomplete', 'approved', 'sent', 'rejected')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     sent_at TEXT,
     send_failures TEXT
@@ -38,10 +39,42 @@ def get_connection(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+def _migrate_editions_status_check(conn: sqlite3.Connection) -> None:
+    """SQLite não permite alterar um CHECK já existente — se `editions` foi
+    criada antes do status 'rejected' existir (caso da produção, que já tem
+    uma edição real enviada), recria a tabela com a constraint atualizada
+    preservando os dados. Idempotente: não faz nada se já está em dia."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='editions'"
+    ).fetchone()
+    if row is None or "'rejected'" in row["sql"]:
+        return
+
+    conn.executescript(
+        """
+        CREATE TABLE editions_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            edition_date TEXT NOT NULL UNIQUE,
+            subject TEXT,
+            body TEXT,
+            status TEXT NOT NULL DEFAULT 'draft'
+                CHECK (status IN ('draft', 'incomplete', 'approved', 'sent', 'rejected')),
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            sent_at TEXT,
+            send_failures TEXT
+        );
+        INSERT INTO editions_new SELECT * FROM editions;
+        DROP TABLE editions;
+        ALTER TABLE editions_new RENAME TO editions;
+        """
+    )
+
+
 def init_db(db_path: str) -> None:
     conn = get_connection(db_path)
     try:
         conn.executescript(SCHEMA)
+        _migrate_editions_status_check(conn)
         conn.commit()
     finally:
         conn.close()

@@ -21,13 +21,24 @@ class EditionNotFoundError(Exception):
     pass
 
 
+class InvalidEditionStateError(Exception):
+    """Ação pedida (aprovar/enviar, rejeitar) não se aplica ao status atual
+    da edição — ex.: tentar aprovar uma edição 'incomplete' ou 'rejected'."""
+
+    pass
+
+
 def approve_and_send(
     conn: sqlite3.Connection, edition_id: int, email_client: EmailSender
 ) -> editions_store.Edition:
     """Requirement: Approval triggers send / One send per approved draft.
 
     Aprova (se ainda em 'draft') e envia imediatamente a todos os
-    assinantes ativos. Uma edição já 'sent' nunca é reenviada."""
+    assinantes ativos. Uma edição já 'sent' nunca é reenviada, e uma
+    edição que não está em 'draft'/'approved' (ex.: 'incomplete',
+    'rejected') nunca é enviada — sem essa checagem explícita,
+    editions_store.approve() vira um no-op silencioso (só atualiza linhas
+    com status='draft') e o código seguia adiante pro envio mesmo assim."""
     edition = editions_store.get_by_id(conn, edition_id)
     if edition is None:
         raise EditionNotFoundError(f"Edição {edition_id} não encontrada")
@@ -35,12 +46,13 @@ def approve_and_send(
     if edition.status == "sent":
         raise AlreadySentError(f"Edição {edition_id} já foi enviada em {edition.sent_at}")
 
-    if edition.status != "approved":
+    if edition.status == "draft":
         edition = editions_store.approve(conn, edition_id)
-        if edition is None:
-            raise EditionNotFoundError(
-                f"Edição {edition_id} não pôde ser aprovada (status inesperado)"
-            )
+        assert edition is not None
+    elif edition.status != "approved":
+        raise InvalidEditionStateError(
+            f"Edição {edition_id} está com status '{edition.status}' e não pode ser enviada"
+        )
 
     recipients = subscribers_store.list_active(conn)
     failures = email_client.send_bulk(
@@ -52,3 +64,23 @@ def approve_and_send(
     sent_edition = editions_store.mark_sent(conn, edition_id, failures)
     assert sent_edition is not None
     return sent_edition
+
+
+def reject_draft(conn: sqlite3.Connection, edition_id: int) -> editions_store.Edition:
+    """O dono descarta um draft pendente em vez de aprovar — a edição some
+    da fila de revisão e nunca é enviada."""
+    edition = editions_store.get_by_id(conn, edition_id)
+    if edition is None:
+        raise EditionNotFoundError(f"Edição {edition_id} não encontrada")
+
+    if edition.status == "sent":
+        raise AlreadySentError(f"Edição {edition_id} já foi enviada em {edition.sent_at}")
+
+    if edition.status != "draft":
+        raise InvalidEditionStateError(
+            f"Edição {edition_id} está com status '{edition.status}' e não pode ser rejeitada"
+        )
+
+    rejected = editions_store.reject(conn, edition_id)
+    assert rejected is not None
+    return rejected

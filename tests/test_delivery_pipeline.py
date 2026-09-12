@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import unittest
 
-from app.delivery.pipeline import AlreadySentError, EditionNotFoundError, approve_and_send
+from app.delivery.pipeline import (
+    AlreadySentError,
+    EditionNotFoundError,
+    InvalidEditionStateError,
+    approve_and_send,
+    reject_draft,
+)
 from app.storage.db import SCHEMA, get_connection
-from app.storage.editions import create_draft
+from app.storage.editions import create_draft, create_incomplete
 from app.storage.subscribers import subscribe, unsubscribe
 from tests.fakes import FakeResendClient
 
@@ -61,6 +67,59 @@ class TestApproveAndSend(unittest.TestCase):
 
         self.assertEqual(result.status, "sent")
         self.assertEqual(result.send_failures, ["a@example.com"])
+
+    def test_incomplete_edition_cannot_be_approved_and_sent(self):
+        # Regressão: antes desse guard, approve_and_send() chamava
+        # editions_store.approve() (que só atualiza linhas com
+        # status='draft', virando um no-op silencioso em qualquer outro
+        # status) e seguia pro envio mesmo assim — uma edição 'incomplete'
+        # (sem notícia real/validação falhou) seria enviada de qualquer jeito.
+        incomplete = create_incomplete(self.conn, "2026-09-13", reason="sem notícia real")
+        resend = FakeResendClient()
+
+        with self.assertRaises(InvalidEditionStateError):
+            approve_and_send(self.conn, incomplete.id, resend)
+
+        self.assertEqual(len(resend.sent), 0)
+
+
+class TestRejectDraft(unittest.TestCase):
+    def setUp(self):
+        self.conn = get_connection(":memory:")
+        self.conn.executescript(SCHEMA)
+        self.edition = create_draft(self.conn, "2026-09-12", "Assunto", "Corpo da edição")
+
+    def tearDown(self):
+        self.conn.close()
+
+    def test_rejecting_a_draft_marks_it_rejected(self):
+        result = reject_draft(self.conn, self.edition.id)
+        self.assertEqual(result.status, "rejected")
+
+    def test_rejected_draft_no_longer_shows_as_pending(self):
+        from app.storage.editions import get_latest_pending
+
+        reject_draft(self.conn, self.edition.id)
+        self.assertIsNone(get_latest_pending(self.conn))
+
+    def test_rejected_draft_can_never_be_sent(self):
+        reject_draft(self.conn, self.edition.id)
+        resend = FakeResendClient()
+
+        with self.assertRaises(InvalidEditionStateError):
+            approve_and_send(self.conn, self.edition.id, resend)
+
+        self.assertEqual(len(resend.sent), 0)
+
+    def test_cannot_reject_an_already_sent_edition(self):
+        approve_and_send(self.conn, self.edition.id, FakeResendClient())
+
+        with self.assertRaises(AlreadySentError):
+            reject_draft(self.conn, self.edition.id)
+
+    def test_unknown_edition_raises(self):
+        with self.assertRaises(EditionNotFoundError):
+            reject_draft(self.conn, 9999)
 
 
 if __name__ == "__main__":

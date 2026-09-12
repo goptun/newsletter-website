@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.api import dependencies  # noqa: E402
+from app.delivery.notify import notify_draft_ready  # noqa: E402
 from app.generation.pipeline import generate_daily_edition  # noqa: E402
 
 
@@ -26,6 +27,12 @@ def main() -> None:
         print(f"Assunto: {edition.subject}")
     if edition.status == "incomplete":
         print(f"Motivo: {edition.body}")
+    elif edition.status == "draft":
+        try:
+            notify_draft_ready(edition)
+            print("Notificação de revisão enviada ao dono.")
+        except Exception as exc:
+            print(f"Aviso: falha ao notificar o dono ({exc}); a edição foi gerada normalmente.")
 
 
 if __name__ == "__main__":

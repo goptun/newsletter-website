@@ -47,3 +47,25 @@ The system SHALL NOT send the same approved draft to subscribers more than once.
 #### Scenario: Re-approval does not resend
 - **WHEN** an already-sent draft is inspected again
 - **THEN** the system does not send it a second time
+
+### Requirement: Owner can reject a pending draft
+The system SHALL let the owner reject a pending draft instead of approving it. A rejected draft SHALL NOT be sent, and SHALL NOT be offered again as the pending draft awaiting review.
+
+#### Scenario: Owner rejects draft
+- **WHEN** the site owner rejects a pending draft
+- **THEN** the edition is marked rejected and is not sent to any subscriber
+
+#### Scenario: Rejected draft no longer pending
+- **WHEN** the owner checks for a pending draft after rejecting one
+- **THEN** the rejected edition is not returned as pending
+
+### Requirement: Only a pending draft can be approved or rejected
+The system SHALL only allow approve or reject on an edition currently awaiting review. It SHALL NOT send or mark-rejected an edition that is incomplete, already sent, or already rejected.
+
+#### Scenario: Cannot approve a non-pending edition
+- **WHEN** approval is requested for an edition that is not awaiting review (e.g. incomplete, already sent, or already rejected)
+- **THEN** the system refuses the action and does not send the edition
+
+#### Scenario: Cannot reject a non-pending edition
+- **WHEN** rejection is requested for an edition that is not awaiting review
+- **THEN** the system refuses the action and does not change the edition beyond its current state

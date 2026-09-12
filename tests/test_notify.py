@@ -46,6 +46,9 @@ class TestNotifyDraftReady(unittest.TestCase):
         owner_email, review_url, edition_date = fake_resend.notifications[0]
         self.assertEqual(owner_email, "dono@example.com")
         self.assertIn("segredo", review_url)
+        # /review/page (não /review/pending): a versão HTML com botões de
+        # Aprovar/Rejeitar, clicável direto no e-mail.
+        self.assertIn("/review/page", review_url)
         self.assertEqual(edition_date, "2026-09-12")
 
     def test_no_notification_when_owner_email_not_configured(self):

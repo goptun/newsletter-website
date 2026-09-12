@@ -83,6 +83,18 @@ def approve(conn: sqlite3.Connection, edition_id: int) -> Edition | None:
     return get_by_id(conn, edition_id)
 
 
+def reject(conn: sqlite3.Connection, edition_id: int) -> Edition | None:
+    """O dono descarta um draft pendente na revisão diária — a edição some
+    da fila (get_latest_pending não a lista mais) e nunca é enviada. Só
+    transiciona a partir de 'draft'; ver app/api/routes_review.py pra como
+    isso é reportado quando já não se aplica (já enviada/já decidida)."""
+    conn.execute(
+        "UPDATE editions SET status = 'rejected' WHERE id = ? AND status = 'draft'", (edition_id,)
+    )
+    conn.commit()
+    return get_by_id(conn, edition_id)
+
+
 def mark_sent(conn: sqlite3.Connection, edition_id: int, failures: list[str]) -> Edition | None:
     """Requirement: Send status visibility — grava o resultado do envio,
     incluindo falhas por destinatário reportadas pelo provedor."""
