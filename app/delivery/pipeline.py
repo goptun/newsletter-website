@@ -10,7 +10,7 @@ from app.storage import subscribers as subscribers_store
 
 
 class EmailSender(Protocol):
-    def send_bulk(self, subject: str, html_body: str, recipients: list[str]) -> list[str]: ...
+    def send_bulk(self, subject: str, body: str, recipients: list[str]) -> list[str]: ...
 
 
 class AlreadySentError(Exception):
@@ -57,7 +57,7 @@ def approve_and_send(
     recipients = subscribers_store.list_active(conn)
     failures = email_client.send_bulk(
         subject=edition.subject or "",
-        html_body=edition.body or "",
+        body=edition.body or "",
         recipients=recipients,
     )
 

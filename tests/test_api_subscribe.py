@@ -66,6 +66,16 @@ class TestSubscribeEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "unsubscribed")
 
+    def test_unsubscribe_via_link_deactivates_subscriber(self):
+        from app.storage.subscribers import list_active
+
+        self.client.post("/subscribe", json={"email": "leitor@example.com"})
+        response = self.client.get("/unsubscribe", params={"email": "leitor@example.com"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers["content-type"])
+        self.assertNotIn("leitor@example.com", list_active(self.conn))
+
 
 if __name__ == "__main__":
     unittest.main()

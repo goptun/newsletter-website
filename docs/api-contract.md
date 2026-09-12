@@ -51,6 +51,35 @@ deve mais receber a newsletter" — já está satisfeita).
 { "status": "unsubscribed" }
 ```
 
+## `GET /api/newsletter/latest`
+
+Devolve a edição mais recente que já foi **enviada** (nunca um draft
+pendente de revisão — esse ainda pode ser rejeitado ou não passou pela
+aprovação do dono). Usado pela página `/newsletter/` do portfolio-website
+pra mostrar a última edição.
+
+**Response — 200 OK**
+
+```json
+{
+  "subject": "Tema 1 / Tema 2 / Tema 3",
+  "body": "Curiosidade para o dia ...\n\nManchete: resumo. As informações são do site X.\n\n...",
+  "sent_at": "2026-09-12 17:10:43"
+}
+```
+
+`body` é texto puro com parágrafos separados por linha em branco (mesmo
+formato salvo internamente) — o primeiro parágrafo é a "Curiosidade do
+dia", os demais são as notícias. Cabe ao consumidor renderizar (ver
+`app/delivery/email_template.py` pra um exemplo de como isso é feito no
+e-mail).
+
+**Response — 404 Not Found** (nenhuma edição foi enviada ainda)
+
+```json
+{ "detail": "Nenhuma edição enviada ainda" }
+```
+
 ## Exemplo (fetch, do lado do portfolio-website)
 
 ```js

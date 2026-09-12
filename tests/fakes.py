@@ -30,8 +30,8 @@ class FakeResendClient:
         self.sent: list[tuple[str, str, list[str]]] = []
         self.notifications: list[tuple[str, str, str]] = []
 
-    def send_bulk(self, subject: str, html_body: str, recipients: list[str]) -> list[str]:
-        self.sent.append((subject, html_body, list(recipients)))
+    def send_bulk(self, subject: str, body: str, recipients: list[str]) -> list[str]:
+        self.sent.append((subject, body, list(recipients)))
         return [r for r in recipients if r in self.fail_for]
 
     def send_draft_ready_notification(self, owner_email: str, review_url: str, edition_date: str) -> None:

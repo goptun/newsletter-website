@@ -6,6 +6,8 @@ uma lib que pode não estar instalada em contextos que não enviam e-mail
 
 from __future__ import annotations
 
+from app.delivery.email_template import render_edition_html
+
 
 class ResendNotConfiguredError(RuntimeError):
     pass
@@ -26,10 +28,16 @@ class ResendClient:
         self._resend = resend
         self.from_address = from_address
 
-    def send_bulk(self, subject: str, html_body: str, recipients: list[str]) -> list[str]:
+    def send_bulk(self, subject: str, body: str, recipients: list[str]) -> list[str]:
         """Requirement: Delivery via transactional provider / Send status
         visibility. Envia a edição a cada destinatário e devolve a lista
-        de e-mails que falharam, sem derrubar o envio aos demais."""
+        de e-mails que falharam, sem derrubar o envio aos demais.
+
+        `body` é o texto puro salvo em editions.body (parágrafos separados
+        por linha em branco), não HTML pronto — cada envio é renderizado
+        aqui via render_edition_html, com o link de cancelamento de
+        inscrição já personalizado pro destinatário (ver
+        app/delivery/email_template.py)."""
         failures: list[str] = []
         for recipient in recipients:
             try:
@@ -38,7 +46,7 @@ class ResendClient:
                         "from": self.from_address,
                         "to": recipient,
                         "subject": subject,
-                        "html": html_body,
+                        "html": render_edition_html(body, recipient),
                     }
                 )
             except Exception:

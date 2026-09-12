@@ -75,6 +75,16 @@ def get_latest_pending(conn: sqlite3.Connection) -> Edition | None:
     return _row_to_edition(row) if row else None
 
 
+def get_latest_sent(conn: sqlite3.Connection) -> Edition | None:
+    """Pra exibição pública (ver app/api/routes_public.py) — só edições
+    que já foram efetivamente enviadas, nunca um draft pendente de revisão
+    (que ainda pode ser rejeitado ou nem passou pela aprovação do dono)."""
+    row = conn.execute(
+        "SELECT * FROM editions WHERE status = 'sent' ORDER BY sent_at DESC LIMIT 1"
+    ).fetchone()
+    return _row_to_edition(row) if row else None
+
+
 def approve(conn: sqlite3.Connection, edition_id: int) -> Edition | None:
     conn.execute(
         "UPDATE editions SET status = 'approved' WHERE id = ? AND status = 'draft'", (edition_id,)

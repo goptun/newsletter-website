@@ -14,6 +14,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import dependencies
+from app.api.routes_public import router as public_router
 from app.api.routes_review import router as review_router
 from app.api.routes_subscribe import router as subscribe_router
 from app.scheduler import start_scheduler
@@ -37,3 +38,4 @@ def health() -> dict[str, str]:
 
 app.include_router(subscribe_router)
 app.include_router(review_router)
+app.include_router(public_router)
