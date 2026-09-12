@@ -8,6 +8,7 @@ from datetime import date
 
 from app.generation.llm_client import NineRouterClient
 from app.generation.prompts import curiosidade_prompt, news_item_prompt, subject_prompt
+from app.generation.relevance import select_relevant
 from app.generation.validation import DraftValidationError, validate_draft
 from app.news.feeds import fetch_candidates
 from app.news.selection import select
@@ -25,7 +26,14 @@ def generate_daily_edition(
     today = today or date.today()
 
     candidates = fetch_candidates()
-    selected = select(candidates, limit=max_items)
+    # Duas etapas: (1) narrows determinístico por atualidade/diversidade/
+    # fonte (app.news.selection.select — nunca falha, serve de base segura);
+    # (2) filtro semântico de relevância via LLM sobre esse pool maior (ver
+    # app/generation/relevance.py) — pega o critério "isso é mesmo notícia
+    # de tech?" que o passo 1 não cobre, com fallback pro resultado do
+    # passo 1 se o LLM falhar.
+    narrowed = select(candidates, limit=max_items * 3)
+    selected = select_relevant(llm_client, narrowed, limit=max_items)
 
     if not selected:
         # Requirement: Real, sourced news only — sem notícia real, a edição

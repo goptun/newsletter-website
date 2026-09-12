@@ -43,6 +43,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
         ]
         fake_llm = FakeLLMClient(
             [
+                "[1]",  # filtro de relevância (app.generation.relevance) seleciona o único candidato
                 "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
@@ -71,6 +72,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
         # fonte -> deve falhar a validação determinística.
         fake_llm = FakeLLMClient(
             [
+                "[1]",  # filtro de relevância seleciona o único candidato
                 "Curiosidade para o dia 12 de setembro: fato real.",
                 "Exemplo de manchete: resumo sem atribuição.",
                 "Exemplo de manchete",
