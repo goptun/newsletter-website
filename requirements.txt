@@ -1,0 +1,21 @@
+# API
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# LLM (9Router — endpoint OpenAI-compatible, ver app/generation/llm_client.py)
+openai==3.13.0
+
+# Notícias (RSS)
+feedparser==6.0.11
+
+# Envio (Resend — ver app/delivery/resend_client.py)
+resend==2.44.0
+
+# Agendamento (job diário in-process — ver app/scheduler.py)
+apscheduler==3.10.4
+
+# Dev / testes
+pytest==8.3.4
+httpx==0.28.1

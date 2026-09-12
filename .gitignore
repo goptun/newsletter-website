@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Virtualenv
+.venv/
+
+# Dados locais (SQLite, artefatos de teste)
+data/
+
+# Segredos / ambiente local
+.env
+
+# macOS
+.DS_Store

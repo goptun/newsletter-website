@@ -1,0 +1,21 @@
+# Reusa o 9Router já rodando no stack do rag-knowledge-assistant nesta
+# mesma VPS (ver design.md Context) — não redefine esse serviço aqui.
+# LLM_BASE_URL no .env deve apontar pro Tailscale IP existente
+# (http://<TAILSCALE_9ROUTER_IP>:20128/v1).
+
+services:
+  newsletter_api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: newsletter_api
+    ports:
+      - "127.0.0.1:8001:8001"
+    env_file:
+      - ../.env
+    volumes:
+      - newsletter_data:/app/data
+    restart: unless-stopped
+
+volumes:
+  newsletter_data:
