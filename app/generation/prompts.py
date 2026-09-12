@@ -9,6 +9,15 @@ from datetime import date
 
 from app.news.feeds import Article
 
+# `date.strftime("%B")` depende do locale do sistema — o container de produção
+# só tem C/C.utf8/POSIX instalados (sem pt_BR), então isso sempre devolveria o
+# nome do mês em inglês ("September"). Mapeamento fixo evita a dependência.
+_MESES_PT_BR = {
+    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
+    5: "maio", 6: "junho", 7: "julho", 8: "agosto",
+    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
+}
+
 CURIOSIDADE_SYSTEM = (
     "Você escreve a seção 'Curiosidade do dia' de uma newsletter diária de "
     "tecnologia. Gere UM parágrafo curto (1-2 frases) no formato "
@@ -37,7 +46,7 @@ SUBJECT_SYSTEM = (
 
 
 def curiosidade_prompt(today: date) -> tuple[str, str]:
-    formatted = today.strftime("%d de %B de %Y")
+    formatted = f"{today.day:02d} de {_MESES_PT_BR[today.month]} de {today.year}"
     system = CURIOSIDADE_SYSTEM.format(data=formatted)
     user = f"Data de hoje: {formatted}."
     return system, user

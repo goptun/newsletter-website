@@ -18,7 +18,13 @@ class Settings(BaseSettings):
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
-    generation_max_tokens: int = 2048
+    # O combo do 9Router em produção (@cf/openai/gpt-oss-120b) é um modelo de
+    # raciocínio: gasta uma quantidade variável de tokens "pensando" antes da
+    # resposta final, e esse gasto conta pro mesmo orçamento de max_tokens.
+    # Medido em produção: ~1750 tokens só de raciocínio pra a "Curiosidade do
+    # dia" (a tarefa mais aberta); um valor baixo corta a resposta antes do
+    # conteúdo final, deixando o campo vazio (ver DEPLOY.md "Troubleshooting").
+    generation_max_tokens: int = 4096
     generation_temperature: float = 0.4
 
     # Notícias
