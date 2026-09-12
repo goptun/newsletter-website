@@ -2,6 +2,15 @@
 # mesma VPS (ver design.md Context) — não redefine esse serviço aqui.
 # LLM_BASE_URL no .env deve apontar pro Tailscale IP existente
 # (http://<TAILSCALE_9ROUTER_IP>:20128/v1).
+#
+# `name` explícito: sem isso, o Compose deriva o nome do projeto do nome
+# da pasta que contém este arquivo ("docker") — igual à pasta
+# rag-knowledge-assistant/docker/. As duas stacks acabavam sendo tratadas
+# como UM ÚNICO projeto Compose ("docker") na mesma VPS, o que faz
+# `docker compose down --remove-orphans` aqui enxergar os containers do
+# rag-knowledge-assistant como "órfãos" e apagá-los. Nunca remova este
+# campo.
+name: newsletter-website
 
 services:
   newsletter_api:
