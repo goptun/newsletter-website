@@ -6,7 +6,11 @@ uma lib que pode não estar instalada em contextos que não enviam e-mail
 
 from __future__ import annotations
 
-from app.delivery.email_template import render_edition_html
+from app.delivery.email_template import (
+    render_edition_html,
+    render_edition_text,
+    unsubscribe_url_for,
+)
 
 
 class ResendNotConfiguredError(RuntimeError):
@@ -41,12 +45,20 @@ class ResendClient:
         failures: list[str] = []
         for recipient in recipients:
             try:
+                unsubscribe_url = unsubscribe_url_for(recipient)
                 self._resend.Emails.send(
                     {
                         "from": self.from_address,
                         "to": recipient,
                         "subject": subject,
                         "html": render_edition_html(body, recipient),
+                        "text": render_edition_text(body, recipient),
+                        # One-click unsubscribe (RFC 8058) — Gmail/Yahoo tratam
+                        # sua ausência como sinal de bulk mail não confiável.
+                        "headers": {
+                            "List-Unsubscribe": f"<{unsubscribe_url}>",
+                            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                        },
                     }
                 )
             except Exception:

@@ -32,6 +32,18 @@ def unsubscribe_url_for(email: str) -> str:
     return f"{UNSUBSCRIBE_URL_BASE}?email={quote(email)}"
 
 
+def render_edition_text(body: str, unsubscribe_email: str) -> str:
+    """Alternativa em texto puro do mesmo conteúdo de render_edition_html —
+    e-mails sem multipart/alternative (só HTML) são um sinal usado por
+    filtros de spam."""
+    unsubscribe_url = unsubscribe_url_for(unsubscribe_email)
+    return (
+        f"{body}\n\n"
+        f"--\nVocê está recebendo porque assinou em matheusramos.dev. "
+        f"Cancelar inscrição: {unsubscribe_url}"
+    )
+
+
 def _render_news_paragraph(paragraph: str) -> str:
     # Reproduz o destaque da manchete do formato de referência (ver
     # docs/newsletter_template*.pdf): a frase-manchete antes dos
