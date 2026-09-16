@@ -1,7 +1,7 @@
-"""Prompts para geração da edição diária — segue a estrutura de referência
-observada em docs/newsletter_template.pdf e docs/newsletter_template_2.pdf,
-mas sem o trecho de propaganda ("E após as notícias de hoje: ...") e sem o
-comentário editorial de cada notícia (ver specs/newsletter/content-generation/spec.md)."""
+"""Prompts para geração da edição diária — estrutura fixa (assunto, Curiosidade
+do dia, um parágrafo por notícia com atribuição de fonte), sem propaganda e
+sem comentário editorial de cada notícia (ver
+specs/newsletter/content-generation/spec.md)."""
 
 from __future__ import annotations
 

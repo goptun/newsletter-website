@@ -15,8 +15,8 @@ def select(candidates: list[Article], limit: int = 6) -> list[Article]:
     itens da mesma fonte antes de repetir — até atingir `limit`.
 
     A "qualidade da fonte" já é garantida a montante: só se navega pelas
-    fontes de app/news/feeds.DEFAULT_FEEDS, todas veículos estabelecidos
-    citados nos exemplos de referência."""
+    fontes de app/news/feeds.DEFAULT_FEEDS, todos veículos de tecnologia
+    estabelecidos."""
     if not candidates:
         return []
 

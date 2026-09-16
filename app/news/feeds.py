@@ -1,10 +1,9 @@
 """Coleta de notícias reais via RSS — ver design.md Decisions: "News
 collection: RSS/official feeds from a curated set of reputable outlets".
 
-Lista inicial de fontes citadas nos dois exemplos de referência
-(docs/newsletter_template.pdf e docs/newsletter_template_2.pdf): TechCrunch,
-The Verge, Ars Technica, The Register, BleepingComputer, 9to5Google e
-404 Media (ver design.md Open Questions — extensível conforme necessário)."""
+Lista inicial de fontes de tecnologia confiáveis: TechCrunch, The Verge,
+Ars Technica, The Register, BleepingComputer, 9to5Google e 404 Media (ver
+design.md Open Questions — extensível conforme necessário)."""
 
 from __future__ import annotations
 

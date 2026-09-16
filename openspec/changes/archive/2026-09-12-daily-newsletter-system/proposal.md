@@ -1,6 +1,6 @@
 ## Why
 
-Matheus wants his own daily tech newsletter, modeled on a newsletter he already reads (a reference newsletter), integrated with his `portfolio-website` for subscriber capture. The goal is to reuse infrastructure he already runs on his Oracle VPS — the 9Router LLM gateway (already integrated in `rag-knowledge-assistant`) — instead of standing up new LLM infra, and to keep the content objective by dropping the sponsored/commentary parts of the reference format.
+Matheus wants his own daily tech newsletter, integrated with his `portfolio-website` for subscriber capture. The goal is to reuse infrastructure he already runs on his Oracle VPS — the 9Router LLM gateway (already integrated in `rag-knowledge-assistant`) — instead of standing up new LLM infra, and to keep the content objective, with no sponsored/commentary parts.
 
 ## What Changes
 

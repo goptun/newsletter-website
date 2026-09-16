@@ -45,9 +45,8 @@ def render_edition_text(body: str, unsubscribe_email: str) -> str:
 
 
 def _render_news_paragraph(paragraph: str) -> str:
-    # Reproduz o destaque da manchete do formato de referência (ver
-    # docs/newsletter_template*.pdf): a frase-manchete antes dos
-    # dois-pontos em negrito, o resto em texto normal.
+    # Destaca a frase-manchete antes dos dois-pontos em negrito, o resto
+    # em texto normal.
     if ": " in paragraph:
         lead, rest = paragraph.split(": ", 1)
         text = f"<strong>{escape(lead)}:</strong> {escape(rest)}"
