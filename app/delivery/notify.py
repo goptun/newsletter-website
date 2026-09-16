@@ -19,3 +19,18 @@ def notify_draft_ready(edition: Edition, owner_email: str | None = None) -> None
     review_url = f"{settings.review_base_url}/review/page?token={settings.review_secret_token}"
     resend_client = dependencies.build_resend_client()
     resend_client.send_draft_ready_notification(owner_email, review_url, edition.edition_date)
+
+
+def notify_generation_failed(edition: Edition, owner_email: str | None = None) -> None:
+    """Requirement (design.md, Risks): sem isso, uma edição 'incomplete'
+    (sem notícia real disponível, ou draft gerado que falhou na validação)
+    ficava só num log que ninguém lê — o dono nunca sabia que aquele dia
+    ficou sem draft nenhum pra revisar."""
+    owner_email = owner_email or settings.newsletter_owner_email
+    if not owner_email:
+        return  # sem destinatário configurado, não há o que notificar
+
+    resend_client = dependencies.build_resend_client()
+    resend_client.send_generation_failed_notification(
+        owner_email, edition.edition_date, edition.body or ""
+    )

@@ -84,6 +84,37 @@ class TestGenerateDailyEdition(unittest.TestCase):
 
         self.assertEqual(edition.status, "incomplete")
 
+    def test_retries_once_when_curiosidade_comes_back_empty(self):
+        # Regressão: em produção o LLM às vezes devolve a "Curiosidade do
+        # dia" vazia (estoura o orçamento de tokens de raciocínio antes do
+        # conteúdo final) e a edição inteira falhava a validação mesmo
+        # havendo notícia real disponível — ver app.generation.pipeline.
+        # _complete_nonempty. Uma segunda tentativa deve recuperar o draft.
+        candidates = [
+            Article(
+                title="Exemplo de manchete",
+                url="https://example.com/1",
+                source="TechCrunch",
+                published=datetime.now(timezone.utc),
+                summary="Resumo da notícia de exemplo.",
+            )
+        ]
+        fake_llm = FakeLLMClient(
+            [
+                "[1]",  # filtro de relevância seleciona o único candidato
+                "",  # 1ª tentativa da curiosidade: vazia
+                "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",  # retry
+                "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
+                "Exemplo de manchete",
+            ]
+        )
+
+        with patch("app.generation.pipeline.fetch_candidates", return_value=candidates):
+            edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
+
+        self.assertEqual(edition.status, "draft")
+        self.assertIn("Curiosidade para o dia", edition.body)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -68,3 +68,23 @@ class ResendClient:
                 ),
             }
         )
+
+    def send_generation_failed_notification(
+        self, owner_email: str, edition_date: str, reason: str
+    ) -> None:
+        """Requirement (design.md, Risks): avisa o dono quando a geração
+        automática do dia não produziu draft nenhum (sem notícia real
+        disponível, ou conteúdo gerado que falhou na validação), em vez de
+        deixar isso só num log que ninguém vê — ver app/delivery/notify.py."""
+        self._resend.Emails.send(
+            {
+                "from": self.from_address,
+                "to": owner_email,
+                "subject": f"Newsletter de {edition_date}: geração falhou, sem draft pra revisar",
+                "html": (
+                    f"<p>A geração automática da edição de {edition_date} não "
+                    f"produziu nenhum draft — nada foi enviado para revisão hoje.</p>"
+                    f"<p>Motivo: {reason}</p>"
+                ),
+            }
+        )

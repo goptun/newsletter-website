@@ -12,7 +12,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.api import dependencies
 from app.config.settings import settings
-from app.delivery.notify import notify_draft_ready
+from app.delivery.notify import notify_draft_ready, notify_generation_failed
 from app.generation.pipeline import generate_daily_edition
 from app.storage.db import get_connection
 
@@ -48,6 +48,12 @@ def run_daily_generation() -> None:
             edition.edition_date,
             edition.status,
         )
+        try:
+            notify_generation_failed(edition)
+        except Exception:
+            logger.exception(
+                "Falha ao notificar o dono sobre falha na geração (edição %s)", edition.edition_date
+            )
 
 
 def start_scheduler(hour: int = 6, minute: int = 0) -> BackgroundScheduler:

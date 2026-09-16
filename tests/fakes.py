@@ -29,6 +29,7 @@ class FakeResendClient:
         self.fail_for = fail_for or set()
         self.sent: list[tuple[str, str, list[str]]] = []
         self.notifications: list[tuple[str, str, str]] = []
+        self.failure_notifications: list[tuple[str, str, str]] = []
 
     def send_bulk(self, subject: str, body: str, recipients: list[str]) -> list[str]:
         self.sent.append((subject, body, list(recipients)))
@@ -36,3 +37,6 @@ class FakeResendClient:
 
     def send_draft_ready_notification(self, owner_email: str, review_url: str, edition_date: str) -> None:
         self.notifications.append((owner_email, review_url, edition_date))
+
+    def send_generation_failed_notification(self, owner_email: str, edition_date: str, reason: str) -> None:
+        self.failure_notifications.append((owner_email, edition_date, reason))

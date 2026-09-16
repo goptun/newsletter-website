@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 from app.config.settings import settings
-from app.delivery.notify import notify_draft_ready
+from app.delivery.notify import notify_draft_ready, notify_generation_failed
 from app.storage.editions import Edition
 from tests.fakes import FakeResendClient
 
@@ -65,6 +65,54 @@ class TestNotifyDraftReady(unittest.TestCase):
 
         with patch("app.delivery.notify.dependencies.build_resend_client") as build_mock:
             notify_draft_ready(edition)
+
+        build_mock.assert_not_called()
+
+
+class TestNotifyGenerationFailed(unittest.TestCase):
+    def setUp(self):
+        self._original_owner = settings.newsletter_owner_email
+
+    def tearDown(self):
+        settings.newsletter_owner_email = self._original_owner
+
+    def test_sends_notification_when_owner_email_configured(self):
+        settings.newsletter_owner_email = "dono@example.com"
+
+        fake_resend = FakeResendClient()
+        edition = Edition(
+            id=1,
+            edition_date="2026-09-16",
+            subject=None,
+            body="Draft gerado não passou na validação: Seção 'Curiosidade do dia' vazia",
+            status="incomplete",
+            sent_at=None,
+            send_failures=None,
+        )
+
+        with patch("app.delivery.notify.dependencies.build_resend_client", return_value=fake_resend):
+            notify_generation_failed(edition)
+
+        self.assertEqual(len(fake_resend.failure_notifications), 1)
+        owner_email, edition_date, reason = fake_resend.failure_notifications[0]
+        self.assertEqual(owner_email, "dono@example.com")
+        self.assertEqual(edition_date, "2026-09-16")
+        self.assertIn("Curiosidade do dia", reason)
+
+    def test_no_notification_when_owner_email_not_configured(self):
+        settings.newsletter_owner_email = ""
+        edition = Edition(
+            id=1,
+            edition_date="2026-09-16",
+            subject=None,
+            body="sem notícia",
+            status="incomplete",
+            sent_at=None,
+            send_failures=None,
+        )
+
+        with patch("app.delivery.notify.dependencies.build_resend_client") as build_mock:
+            notify_generation_failed(edition)
 
         build_mock.assert_not_called()
 

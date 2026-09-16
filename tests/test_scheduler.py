@@ -51,7 +51,7 @@ class TestRunDailyGeneration(unittest.TestCase):
 
         notify_mock.assert_called_once_with(draft_edition)
 
-    def test_does_not_notify_when_edition_is_incomplete(self):
+    def test_does_not_send_draft_ready_when_edition_is_incomplete(self):
         incomplete_edition = Edition(
             id=1,
             edition_date="2026-09-12",
@@ -66,12 +66,39 @@ class TestRunDailyGeneration(unittest.TestCase):
             patch("app.scheduler.dependencies.build_llm_client"),
             patch("app.scheduler.generate_daily_edition", return_value=incomplete_edition),
             patch("app.scheduler.notify_draft_ready") as notify_mock,
+            patch("app.scheduler.notify_generation_failed"),
         ):
             from app.scheduler import run_daily_generation
 
             run_daily_generation()
 
         notify_mock.assert_not_called()
+
+    def test_notifies_generation_failure_when_edition_is_incomplete(self):
+        # Regressão: antes dessa notificação, uma edição 'incomplete'
+        # ficava só num log que ninguém lê — o dono nunca sabia que aquele
+        # dia não teve draft nenhum pra revisar.
+        incomplete_edition = Edition(
+            id=1,
+            edition_date="2026-09-12",
+            subject=None,
+            body="sem notícia",
+            status="incomplete",
+            sent_at=None,
+            send_failures=None,
+        )
+
+        with (
+            patch("app.scheduler.dependencies.build_llm_client"),
+            patch("app.scheduler.generate_daily_edition", return_value=incomplete_edition),
+            patch("app.scheduler.notify_draft_ready"),
+            patch("app.scheduler.notify_generation_failed") as notify_failed_mock,
+        ):
+            from app.scheduler import run_daily_generation
+
+            run_daily_generation()
+
+        notify_failed_mock.assert_called_once_with(incomplete_edition)
 
 
 class TestStartScheduler(unittest.TestCase):

@@ -15,6 +15,20 @@ from app.news.selection import select
 from app.storage import editions as editions_store
 
 
+def _complete_nonempty(llm_client: NineRouterClient, system: str, user: str, retries: int = 1) -> str:
+    """Reexecuta a chamada ao LLM quando a resposta vem vazia — sintoma
+    observado em produção quando o modelo de raciocínio estoura o
+    orçamento de tokens "pensando" antes do conteúdo final (ver
+    settings.generation_max_tokens), o que derrubava a edição inteira pra
+    'incomplete' mesmo havendo notícia real disponível."""
+    result = llm_client.complete(system, user).strip()
+    attempts = 0
+    while not result and attempts < retries:
+        attempts += 1
+        result = llm_client.complete(system, user).strip()
+    return result
+
+
 def generate_daily_edition(
     conn: sqlite3.Connection,
     llm_client: NineRouterClient,
@@ -45,15 +59,15 @@ def generate_daily_edition(
         )
 
     curiosidade_system, curiosidade_user = curiosidade_prompt(today)
-    curiosidade = llm_client.complete(curiosidade_system, curiosidade_user).strip()
+    curiosidade = _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
 
     news_paragraphs = []
     for article in selected:
         system, user = news_item_prompt(article)
-        news_paragraphs.append(llm_client.complete(system, user).strip())
+        news_paragraphs.append(_complete_nonempty(llm_client, system, user))
 
     subj_system, subj_user = subject_prompt([a.title for a in selected[:3]])
-    subject = llm_client.complete(subj_system, subj_user).strip()
+    subject = _complete_nonempty(llm_client, subj_system, subj_user)
 
     try:
         validate_draft(subject, curiosidade, news_paragraphs)
