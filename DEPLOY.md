@@ -7,7 +7,9 @@ em execução no stack do `rag-knowledge-assistant` — este repositório não
 sobe outro 9Router.
 
 - **Host**: `<VPS_HOST_IP>` (Ubuntu 24.04, ARM) — mesma VPS documentada em
-  `../portfolio-website/DEPLOY.md`.
+  `../portfolio-website/DEPLOY.md`. O IP real fica só no `.env`/gerenciador
+  de segredos local, nunca commitado — o domínio é servido via Cloudflare
+  proxied justamente pra não expor o IP de origem.
 - **Serviço**: container `newsletter_api`, escutando só em
   `127.0.0.1:8001` (não exposto diretamente à internet).
 - **Dados**: SQLite em um volume Docker nomeado (`newsletter_data`,
@@ -18,15 +20,15 @@ sobe outro 9Router.
 
 ```bash
 export DEPLOY_HOST=ubuntu@<VPS_HOST_IP>
-export DEPLOY_KEY=~/Desktop/ssh-key-2026-09-09-oracle.key
+export DEPLOY_KEY=~/Desktop/<sua-chave-ssh>.key
 
 # 1. Envia o código pra VPS (ou faz git pull lá, se o repo já estiver clonado)
 rsync -az --exclude .venv --exclude data -e "ssh -i $DEPLOY_KEY" ./ "$DEPLOY_HOST:~/newsletter-website/"
 
 # 2. Garante o .env configurado na VPS (LLM_BASE_URL já deve apontar pro
-#    9Router existente, ex.: http://<TAILSCALE_9ROUTER_IP>:20128/v1 — ver
-#    .env.example). RESEND_API_KEY e REVIEW_SECRET_TOKEN são obrigatórios
-#    pra geração/envio funcionarem de verdade.
+#    9Router existente na rede Tailscale — ver .env.example pro formato).
+#    RESEND_API_KEY e REVIEW_SECRET_TOKEN são obrigatórios pra
+#    geração/envio funcionarem de verdade.
 ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" "test -f ~/newsletter-website/.env || echo 'FALTA CRIAR .env NA VPS'"
 
 # 3. Builda e sobe (ou atualiza) o container

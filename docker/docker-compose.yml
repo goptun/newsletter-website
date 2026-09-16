@@ -1,7 +1,7 @@
 # Reusa o 9Router já rodando no stack do rag-knowledge-assistant nesta
 # mesma VPS (ver design.md Context) — não redefine esse serviço aqui.
-# LLM_BASE_URL no .env deve apontar pro Tailscale IP existente
-# (http://<TAILSCALE_9ROUTER_IP>:20128/v1).
+# LLM_BASE_URL no .env deve apontar pro IP do 9Router na rede Tailscale
+# (ver .env.example).
 #
 # `name` explícito: sem isso, o Compose deriva o nome do projeto do nome
 # da pasta que contém este arquivo ("docker") — igual à pasta

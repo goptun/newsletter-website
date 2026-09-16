@@ -27,7 +27,7 @@ class NineRouterClient:
         if not base_url:
             raise LLMNotConfiguredError(
                 "LLM_BASE_URL não configurada. Defina no .env apontando pro 9Router "
-                "(ex.: http://<TAILSCALE_9ROUTER_IP>:20128/v1)."
+                "(ver .env.example pro formato)."
             )
         if not model:
             raise LLMNotConfiguredError(
