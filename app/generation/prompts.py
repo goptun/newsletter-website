@@ -39,9 +39,10 @@ NEWS_SYSTEM = (
 
 SUBJECT_SYSTEM = (
     "Você escreve a linha de assunto de uma newsletter diária de tecnologia, "
-    "resumindo 2 a 3 das principais notícias em fragmentos curtos separados "
-    "por ' / ', no estilo 'Tema 1 / Tema 2 / Tema 3'. Responda só com a "
-    "linha de assunto, sem aspas."
+    "resumindo 2 a 3 das principais notícias do dia em uma frase corrida e "
+    "natural (como o assunto de um e-mail de verdade, não uma lista de "
+    "manchetes separadas por barra ou pipe). Evite linguagem alarmista ou "
+    "de clickbait. Responda só com a linha de assunto, sem aspas."
 )
 
 
