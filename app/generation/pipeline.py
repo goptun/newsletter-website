@@ -58,16 +58,28 @@ def generate_daily_edition(
             reason="Nenhuma notícia real disponível nas fontes configuradas hoje.",
         )
 
-    curiosidade_system, curiosidade_user = curiosidade_prompt(today)
-    curiosidade = _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
+    try:
+        curiosidade_system, curiosidade_user = curiosidade_prompt(today)
+        curiosidade = _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
 
-    news_paragraphs = []
-    for article in selected:
-        system, user = news_item_prompt(article)
-        news_paragraphs.append(_complete_nonempty(llm_client, system, user))
+        news_paragraphs = []
+        for article in selected:
+            system, user = news_item_prompt(article)
+            news_paragraphs.append(_complete_nonempty(llm_client, system, user))
 
-    subj_system, subj_user = subject_prompt([a.title for a in selected[:3]])
-    subject = _complete_nonempty(llm_client, subj_system, subj_user)
+        subj_system, subj_user = subject_prompt([a.title for a in selected[:3]])
+        subject = _complete_nonempty(llm_client, subj_system, subj_user)
+    except Exception as exc:
+        # Diferente de select_relevant (que tem fallback pra falha de LLM),
+        # essas chamadas não têm como seguir sem resposta do modelo. Sem
+        # isso, um erro de rede/timeout no 9Router subia sem tratamento até
+        # o scheduler e derrubava o job silenciosamente — nem o e-mail de
+        # draft nem o de falha chegavam a sair (ver app/scheduler.py).
+        return editions_store.create_incomplete(
+            conn,
+            today.isoformat(),
+            reason=f"Falha ao chamar o LLM durante a geração do conteúdo: {exc}",
+        )
 
     try:
         validate_draft(subject, curiosidade, news_paragraphs)

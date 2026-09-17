@@ -14,6 +14,7 @@ from app.api import dependencies
 from app.config.settings import settings
 from app.delivery.notify import notify_draft_ready, notify_generation_failed
 from app.generation.pipeline import generate_daily_edition
+from app.storage import editions as editions_store
 from app.storage.db import get_connection
 
 logger = logging.getLogger("newsletter.scheduler")
@@ -27,10 +28,24 @@ def run_daily_generation() -> None:
     Abre sua própria conexão SQLite: o APScheduler roda jobs em threads
     do seu próprio pool, e sqlite3.Connection não atravessa threads (ver
     app/api/dependencies.py::get_db)."""
+    today = date.today()
     conn = get_connection(settings.db_path)
     try:
-        llm_client = dependencies.build_llm_client()
-        edition = generate_daily_edition(conn, llm_client, today=date.today())
+        try:
+            llm_client = dependencies.build_llm_client()
+            edition = generate_daily_edition(conn, llm_client, today=today)
+        except Exception as exc:
+            # Segunda camada de proteção: cobre falhas fora do pipeline em
+            # si (ex.: build_llm_client() rejeitando LLM_MODEL/LLM_BASE_URL
+            # não configurados). Sem isso, uma exceção aqui subia direto
+            # pro job do APScheduler e o dono nunca era avisado que a
+            # edição do dia simplesmente não saiu (ver notify_generation_failed
+            # abaixo, que dependeria de um objeto Edition que nunca chegava
+            # a existir).
+            logger.exception("Falha inesperada ao gerar a edição de %s", today.isoformat())
+            edition = editions_store.create_incomplete(
+                conn, today.isoformat(), reason=f"Erro inesperado na geração: {exc}"
+            )
     finally:
         conn.close()
 
