@@ -68,14 +68,20 @@ class TestGenerateDailyEdition(unittest.TestCase):
                 summary="Resumo da notícia de exemplo.",
             )
         ]
-        # a resposta do parágrafo de notícia não termina com atribuição de
-        # fonte -> deve falhar a validação determinística.
+        # a resposta do parágrafo de notícia nunca termina com atribuição de
+        # fonte, nas 3 tentativas -> deve esgotar o loop de reprocessamento
+        # (max_attempts) e só então falhar a validação determinística.
         fake_llm = FakeLLMClient(
             [
                 "[1]",  # filtro de relevância seleciona o único candidato
-                "Curiosidade para o dia 12 de setembro: fato real.",
-                "Exemplo de manchete: resumo sem atribuição.",
-                "Exemplo de manchete",
+                *(
+                    [
+                        "Curiosidade para o dia 12 de setembro: fato real.",
+                        "Exemplo de manchete: resumo sem atribuição.",
+                        "Exemplo de manchete",
+                    ]
+                    * 3
+                ),
             ]
         )
 
@@ -83,6 +89,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
             edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
 
         self.assertEqual(edition.status, "incomplete")
+        self.assertEqual(len(fake_llm.calls), 1 + 3 * 3)
 
     def test_retries_once_when_curiosidade_comes_back_empty(self):
         # Regressão: em produção o LLM às vezes devolve a "Curiosidade do
@@ -104,6 +111,45 @@ class TestGenerateDailyEdition(unittest.TestCase):
                 "[1]",  # filtro de relevância seleciona o único candidato
                 "",  # 1ª tentativa da curiosidade: vazia
                 "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",  # retry
+                "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
+                "Exemplo de manchete",
+            ]
+        )
+
+        with patch("app.generation.pipeline.fetch_candidates", return_value=candidates):
+            edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
+
+        self.assertEqual(edition.status, "draft")
+        self.assertIn("Curiosidade para o dia", edition.body)
+
+    def test_reprocesses_whole_generation_after_a_failed_attempt(self):
+        # Regressão: em produção (2026-09-18) a "Curiosidade do dia" veio
+        # vazia mesmo após o retry individual de _complete_nonempty (o
+        # modelo de raciocínio estourou o orçamento de tokens nas duas
+        # chamadas), e a edição inteira foi descartada como 'incomplete'
+        # mesmo com notícia real disponível. generate_daily_edition agora
+        # reprocessa a geração completa (não só a chamada individual) antes
+        # de desistir — ver max_attempts.
+        candidates = [
+            Article(
+                title="Exemplo de manchete",
+                url="https://example.com/1",
+                source="TechCrunch",
+                published=datetime.now(timezone.utc),
+                summary="Resumo da notícia de exemplo.",
+            )
+        ]
+        fake_llm = FakeLLMClient(
+            [
+                "[1]",  # filtro de relevância seleciona o único candidato
+                # tentativa 1: curiosidade vazia nas duas chamadas do retry
+                # individual -> validate_draft falha, mas o loop externo tenta de novo
+                "",
+                "",
+                "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
+                "Exemplo de manchete",
+                # tentativa 2: tudo certo
+                "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
             ]

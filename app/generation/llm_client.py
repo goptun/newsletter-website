@@ -55,5 +55,15 @@ class NineRouterClient:
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            # arsenal-vps é um modelo de raciocínio: sem isso, ele às vezes
+            # gasta o orçamento inteiro de max_tokens "pensando" (ex.:
+            # vasculhando décadas de história da computação pra achar um
+            # fato de uma data específica) e devolve content=None,
+            # finish_reason="length" — sintoma observado em produção em
+            # 2026-09-18 (edição do dia marcada 'incomplete' por "Curiosidade
+            # do dia vazia" mesmo com notícia real disponível). "low" reduz
+            # drasticamente esse raciocínio interno sem tornar o texto final
+            # pior pro que é pedido aqui (parágrafo curto e objetivo).
+            extra_body={"reasoning_effort": "low"},
         )
         return response.choices[0].message.content or ""
