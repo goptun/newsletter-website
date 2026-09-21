@@ -21,11 +21,11 @@ The system SHALL only include news items backed by an actually fetched source, a
 - **THEN** the system does not fabricate content and instead marks the draft as incomplete/failed for manual attention
 
 ### Requirement: Reference structure compliance
-Each draft SHALL contain: a subject line summarizing 2-3 top stories, an opening "Curiosidade do dia" section, followed by one paragraph per selected news item, each ending with a sentence attributing the original source.
+Each draft SHALL contain: a short, professional subject line (at most ~60 characters, no trailing period) highlighting 1-2 top stories, an opening paragraph in the form "Curiosidade do dia: Em <day> de <month> de <historical year>, ...", followed by one paragraph per selected news item. Each news paragraph SHALL start with a short headline (at most ~8 words, no colon), followed by a colon and a detailed body of 2-4 sentences that tells the story without repeating the headline, and end with a sentence attributing the original source.
 
 #### Scenario: Draft follows structure
 - **WHEN** a draft is generated
-- **THEN** it contains a subject line, a "Curiosidade do dia" opening paragraph, and one or more news paragraphs each ending in a sentence attributing the source
+- **THEN** it contains a short subject line, a "Curiosidade do dia:" opening paragraph that does not include the current date, and one or more news paragraphs each shaped as "<short headline>: <detailed body> As informações são do site <source>."
 
 ### Requirement: No sponsored content
 The system SHALL NOT include sponsored/advertisement content in the draft, including any teaser segment appended after the "Curiosidade do dia" fact.
@@ -42,7 +42,7 @@ Each news paragraph SHALL contain only objective, factual summary content plus t
 - **THEN** the paragraph reports only factual summary content and ends with a source attribution, without an added personal or editorial remark
 
 ### Requirement: News selection criteria
-The system SHALL select news items for the draft prioritizing relevance, recency, source quality, topic diversity, and usefulness to the reader.
+The system SHALL select news items for the draft prioritizing relevance, recency (news from the current day/overnight, falling back to older items only when too few fresh ones exist), source quality, topic diversity, and usefulness to the reader.
 
 #### Scenario: Selection reflects criteria
 - **WHEN** multiple candidate news items are available for the day

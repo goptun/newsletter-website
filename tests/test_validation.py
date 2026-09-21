@@ -12,7 +12,7 @@ class TestValidateDraft(unittest.TestCase):
     def test_accepts_well_formed_draft(self):
         validate_draft(
             subject="Tema 1 / Tema 2",
-            curiosidade="Curiosidade para o dia 12 de setembro: fato real.",
+            curiosidade="Curiosidade do dia: Em 12 de setembro de 1995, fato real.",
             news_paragraphs=[
                 "Manchete: resumo objetivo da notícia. As informações são do site TechCrunch."
             ],
@@ -23,7 +23,7 @@ class TestValidateDraft(unittest.TestCase):
             validate_draft(
                 subject="Tema 1",
                 curiosidade=(
-                    "Curiosidade para o dia X: fato. E após as notícias de hoje: propaganda."
+                    "Curiosidade do dia: fato. E após as notícias de hoje: propaganda."
                 ),
                 news_paragraphs=["Manchete: resumo. As informações são do site TechCrunch."],
             )
@@ -33,7 +33,7 @@ class TestValidateDraft(unittest.TestCase):
         with self.assertRaises(DraftValidationError) as ctx:
             validate_draft(
                 subject="Tema 1",
-                curiosidade="Curiosidade para o dia X: fato real.",
+                curiosidade="Curiosidade do dia: fato real.",
                 news_paragraphs=["Manchete: resumo sem atribuição de fonte."],
             )
         self.assertTrue(any("atribuição" in v for v in ctx.exception.violations))
@@ -42,7 +42,7 @@ class TestValidateDraft(unittest.TestCase):
         with self.assertRaises(DraftValidationError):
             validate_draft(
                 subject="",
-                curiosidade="Curiosidade para o dia X: fato.",
+                curiosidade="Curiosidade do dia: fato.",
                 news_paragraphs=["Manchete: resumo. As informações são do site X."],
             )
 
@@ -50,12 +50,40 @@ class TestValidateDraft(unittest.TestCase):
         with self.assertRaises(DraftValidationError) as ctx:
             validate_draft(
                 subject="Tema 1",
-                curiosidade="Curiosidade para o dia X: fato real.",
+                curiosidade="Curiosidade do dia: fato real.",
                 news_paragraphs=[
                     "Manchete: resumo. Use o cupom hoje. As informações são do site X."
                 ],
             )
         self.assertTrue(any("propaganda" in v for v in ctx.exception.violations))
+
+    def test_rejects_overlong_news_headline(self):
+        headline = "Manchete " * 15  # bem acima do limite de título curto
+        with self.assertRaises(DraftValidationError) as ctx:
+            validate_draft(
+                subject="Tema 1",
+                curiosidade="Curiosidade do dia: fato real.",
+                news_paragraphs=[f"{headline.strip()}: resumo. As informações são do site X."],
+            )
+        self.assertTrue(any("longo demais" in v for v in ctx.exception.violations))
+
+    def test_rejects_news_paragraph_without_headline(self):
+        with self.assertRaises(DraftValidationError) as ctx:
+            validate_draft(
+                subject="Tema 1",
+                curiosidade="Curiosidade do dia: fato real.",
+                news_paragraphs=["Resumo sem título. As informações são do site X."],
+            )
+        self.assertTrue(any("sem título" in v for v in ctx.exception.violations))
+
+    def test_rejects_overlong_subject(self):
+        with self.assertRaises(DraftValidationError) as ctx:
+            validate_draft(
+                subject="Assunto " * 20,
+                curiosidade="Curiosidade do dia: fato real.",
+                news_paragraphs=["Manchete: resumo. As informações são do site X."],
+            )
+        self.assertTrue(any("assunto" in v.lower() for v in ctx.exception.violations))
 
 
 if __name__ == "__main__":

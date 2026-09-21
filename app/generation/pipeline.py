@@ -4,6 +4,7 @@ persistência — ver specs/newsletter/content-generation/spec.md."""
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import date
 
@@ -16,6 +17,26 @@ from app.news.selection import select
 from app.storage import editions as editions_store
 
 logger = logging.getLogger("newsletter.generation")
+
+
+CURIOSIDADE_PREFIX = "Curiosidade do dia:"
+_CURIOSIDADE_LEAD_RE = re.compile(r"^\s*curiosidade[^:\n]{0,60}:\s*", re.IGNORECASE)
+
+
+def _normalize_curiosidade(text: str) -> str:
+    """Garante o rótulo fixo 'Curiosidade do dia: ' no início — o LLM às
+    vezes escreve 'Curiosidade para o dia <data>: ...' mesmo com o prompt
+    pedindo o formato curto. Corrigir aqui (em vez de reprovar na
+    validação) evita descartar a edição inteira por um detalhe de rótulo.
+    Texto vazio passa direto pra validate_draft reportar."""
+    text = text.strip()
+    if not text:
+        return text
+    return f"{CURIOSIDADE_PREFIX} {_CURIOSIDADE_LEAD_RE.sub('', text, count=1)}"
+
+
+def _clean_subject(text: str) -> str:
+    return text.strip().strip("\"'“”").rstrip(".").strip()
 
 
 def _complete_nonempty(llm_client: NineRouterClient, system: str, user: str, retries: int = 1) -> str:
@@ -40,7 +61,9 @@ def _generate_once(
     ou a exceção original do LLM em caso de falha de chamada — quem chama
     decide se tenta de novo (ver generate_daily_edition)."""
     curiosidade_system, curiosidade_user = curiosidade_prompt(today)
-    curiosidade = _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
+    curiosidade = _normalize_curiosidade(
+        _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
+    )
 
     news_paragraphs = []
     for article in selected:
@@ -48,7 +71,7 @@ def _generate_once(
         news_paragraphs.append(_complete_nonempty(llm_client, system, user))
 
     subj_system, subj_user = subject_prompt([a.title for a in selected[:3]])
-    subject = _complete_nonempty(llm_client, subj_system, subj_user)
+    subject = _clean_subject(_complete_nonempty(llm_client, subj_system, subj_user))
 
     validate_draft(subject, curiosidade, news_paragraphs)
     return subject, curiosidade, news_paragraphs

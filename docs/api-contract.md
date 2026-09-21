@@ -62,8 +62,8 @@ pra mostrar a última edição.
 
 ```json
 {
-  "subject": "Tema 1 / Tema 2 / Tema 3",
-  "body": "Curiosidade para o dia ...\n\nManchete: resumo. As informações são do site X.\n\n...",
+  "subject": "Segurança em foco: npm malicioso e falha no Codex",
+  "body": "Curiosidade do dia: Em 21 de setembro de 1995, ...\n\nTítulo curto: desenvolvimento da notícia. As informações são do site X.\n\n...",
   "sent_at": "2026-09-12 17:10:43"
 }
 ```

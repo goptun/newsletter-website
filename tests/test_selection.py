@@ -51,6 +51,18 @@ class TestSelect(unittest.TestCase):
         selected = select(candidates, limit=4)
         self.assertEqual(len(selected), 4)
 
+    def test_drops_stale_articles_when_enough_fresh_ones_exist(self):
+        fresh = [_article("A", 2), _article("B", 3), _article("C", 4)]
+        stale = [_article("D", 100), _article("E", 120)]
+        selected = select(stale + fresh, limit=3)
+        self.assertCountEqual(selected, fresh)
+
+    def test_falls_back_to_stale_articles_when_too_few_fresh_ones(self):
+        fresh = [_article("A", 2)]
+        stale = [_article("B", 100), _article("C", 120)]
+        selected = select(fresh + stale, limit=3)
+        self.assertEqual(len(selected), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

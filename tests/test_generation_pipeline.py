@@ -44,7 +44,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
         fake_llm = FakeLLMClient(
             [
                 "[1]",  # filtro de relevância (app.generation.relevance) seleciona o único candidato
-                "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",
+                "Curiosidade do dia: Em 12 de setembro de 1995, fato real de tecnologia.",
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
             ]
@@ -54,7 +54,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
             edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
 
         self.assertEqual(edition.status, "draft")
-        self.assertIn("Curiosidade para o dia", edition.body)
+        self.assertTrue(edition.body.startswith("Curiosidade do dia: Em 12 de setembro de 1995"))
         self.assertIn("As informações são do site TechCrunch.", edition.body)
         self.assertEqual(edition.subject, "Exemplo de manchete")
 
@@ -76,7 +76,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
                 "[1]",  # filtro de relevância seleciona o único candidato
                 *(
                     [
-                        "Curiosidade para o dia 12 de setembro: fato real.",
+                        "Curiosidade do dia: Em 12 de setembro de 1995, fato real.",
                         "Exemplo de manchete: resumo sem atribuição.",
                         "Exemplo de manchete",
                     ]
@@ -110,7 +110,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
             [
                 "[1]",  # filtro de relevância seleciona o único candidato
                 "",  # 1ª tentativa da curiosidade: vazia
-                "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",  # retry
+                "Curiosidade do dia: Em 12 de setembro de 1995, fato real de tecnologia.",  # retry
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
             ]
@@ -120,7 +120,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
             edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
 
         self.assertEqual(edition.status, "draft")
-        self.assertIn("Curiosidade para o dia", edition.body)
+        self.assertTrue(edition.body.startswith("Curiosidade do dia: Em 12 de setembro de 1995"))
 
     def test_reprocesses_whole_generation_after_a_failed_attempt(self):
         # Regressão: em produção (2026-09-18) a "Curiosidade do dia" veio
@@ -149,7 +149,7 @@ class TestGenerateDailyEdition(unittest.TestCase):
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
                 # tentativa 2: tudo certo
-                "Curiosidade para o dia 12 de setembro: fato real de tecnologia.",
+                "Curiosidade do dia: Em 12 de setembro de 1995, fato real de tecnologia.",
                 "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
                 "Exemplo de manchete",
             ]
@@ -159,7 +159,38 @@ class TestGenerateDailyEdition(unittest.TestCase):
             edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
 
         self.assertEqual(edition.status, "draft")
-        self.assertIn("Curiosidade para o dia", edition.body)
+        self.assertTrue(edition.body.startswith("Curiosidade do dia: Em 12 de setembro de 1995"))
+
+    def test_normalizes_curiosidade_label_and_cleans_subject(self):
+        # O LLM às vezes ignora o formato curto e escreve "Curiosidade para o
+        # dia <data>: ..."; o assunto pode vir com aspas/ponto final.
+        candidates = [
+            Article(
+                title="Exemplo de manchete",
+                url="https://example.com/1",
+                source="TechCrunch",
+                published=datetime.now(timezone.utc),
+                summary="Resumo da notícia de exemplo.",
+            )
+        ]
+        fake_llm = FakeLLMClient(
+            [
+                "[1]",
+                "Curiosidade para o dia 12 de setembro de 2026: Em 12 de setembro de 1995, fato real.",
+                "Exemplo de manchete: resumo objetivo. As informações são do site TechCrunch.",
+                '"Exemplo de manchete."',
+            ]
+        )
+
+        with patch("app.generation.pipeline.fetch_candidates", return_value=candidates):
+            edition = generate_daily_edition(self.conn, llm_client=fake_llm, today=date(2026, 9, 12))
+
+        self.assertEqual(edition.status, "draft")
+        self.assertTrue(
+            edition.body.startswith("Curiosidade do dia: Em 12 de setembro de 1995, fato real.")
+        )
+        self.assertNotIn("para o dia", edition.body)
+        self.assertEqual(edition.subject, "Exemplo de manchete")
 
 
 if __name__ == "__main__":
