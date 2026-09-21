@@ -24,7 +24,10 @@ CURIOSIDADE_SYSTEM = (
     "tecnologia. Gere UM parágrafo curto (1-2 frases) exatamente no formato "
     "'Curiosidade do dia: Em {data} de <ano>, <fato real e verificável de "
     "história da tecnologia/computação que aconteceu nesse dia e mês>.' — "
-    "'<ano>' é o ano em que o fato ocorreu, nunca o ano atual. Não inclua "
+    "'<ano>' é o ano em que o fato ocorreu, nunca o ano atual. Só use um "
+    "fato cuja data exata (dia, mês e ano) você conhece com certeza; se "
+    "hesitar, escolha outro marco menos famoso, mas certo — nunca aproxime "
+    "a data nem misture eventos. Não inclua "
     "nenhuma propaganda, call-to-action ou frase de transição do tipo 'E "
     "após as notícias de hoje'. Responda só com o parágrafo, em português "
     "do Brasil."
@@ -44,9 +47,12 @@ NEWS_SYSTEM = (
     "em detalhe — não repita o título com outras palavras.\n"
     "Sem opinião, sem comentário adicional, sem conclusão pessoal. "
     "Baseie-se exclusivamente no título e no texto fornecidos — não invente "
-    "fatos, números ou declarações que não estejam neles. Mantenha nomes "
-    "próprios de produtos e empresas como no original. Responda só com o "
-    "parágrafo, em português do Brasil."
+    "fatos, números ou declarações que não estejam neles. Se o texto for "
+    "curto, escreva só 1 ou 2 frases: NUNCA complete com generalidades, "
+    "recomendações, contexto de mercado, a data de publicação ou frases do "
+    "tipo 'reforçando o compromisso...' que não estejam no texto. Mantenha "
+    "nomes próprios de produtos e empresas como no original. Responda só "
+    "com o parágrafo, em português do Brasil."
 )
 
 SUBJECT_SYSTEM = (

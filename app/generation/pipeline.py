@@ -12,7 +12,7 @@ from app.generation.llm_client import NineRouterClient
 from app.generation.prompts import curiosidade_prompt, news_item_prompt, subject_prompt
 from app.generation.relevance import select_relevant
 from app.generation.validation import DraftValidationError, validate_draft
-from app.news.feeds import fetch_candidates
+from app.news.feeds import enrich_with_full_text, fetch_candidates
 from app.news.selection import select
 from app.storage import editions as editions_store
 
@@ -97,6 +97,9 @@ def generate_daily_edition(
     # passo 1 se o LLM falhar.
     narrowed = select(candidates, limit=max_items * 3)
     selected = select_relevant(llm_client, narrowed, limit=max_items)
+    # Só depois da seleção (poucas requisições): troca o resumo curto do RSS
+    # pelo texto da matéria, base factual pro desenvolvimento da notícia.
+    selected = enrich_with_full_text(selected)
 
     if not selected:
         # Requirement: Real, sourced news only — sem notícia real, a edição

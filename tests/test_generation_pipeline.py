@@ -18,6 +18,10 @@ class TestGenerateDailyEdition(unittest.TestCase):
     def setUp(self):
         self.conn = get_connection(":memory:")
         self.conn.executescript(SCHEMA)
+        # sem rede nos testes: a busca do texto completo da matéria vira no-op
+        patcher = patch("app.generation.pipeline.enrich_with_full_text", side_effect=lambda a: a)
+        self.enrich_mock = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def tearDown(self):
         self.conn.close()

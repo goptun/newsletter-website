@@ -11,11 +11,16 @@ feed do Chosun é geral e em coreano, não de tecnologia."""
 from __future__ import annotations
 
 import html
+import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from html.parser import HTMLParser
 
 import feedparser
+import httpx
+
+logger = logging.getLogger("newsletter.feeds")
 
 DEFAULT_FEEDS: dict[str, str] = {
     "BleepingComputer": "https://www.bleepingcomputer.com/feed/",
@@ -34,6 +39,16 @@ DEFAULT_FEEDS: dict[str, str] = {
 # ter 1-2 frases; quando o feed traz o corpo completo (content:encoded),
 # usar ele dá material pra um desenvolvimento detalhado sem inventar fatos.
 MAX_SUMMARY_CHARS = 3000
+
+# Abaixo disso o RSS não dá material pra um desenvolvimento de 2-4 frases
+# (ex.: BleepingComputer e 9to5Google mandam só 1-2 frases), e o LLM acaba
+# completando com generalidades — então busca-se o texto da matéria na URL.
+MIN_RSS_TEXT_CHARS = 800
+ARTICLE_FETCH_TIMEOUT = 10.0
+_BROWSER_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+)
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _BLOCK_END_RE = re.compile(r"</(p|div|li|h[1-6])>|<br\s*/?>", re.IGNORECASE)
@@ -66,6 +81,90 @@ def _entry_text(entry) -> str:
     if len(best) > MAX_SUMMARY_CHARS:
         best = best[:MAX_SUMMARY_CHARS].rsplit(" ", 1)[0] + "…"
     return best
+
+
+class _ArticleTextParser(HTMLParser):
+    """Extrai os parágrafos do corpo da matéria: usa só <p> dentro de
+    <article> quando existir (senão todos os <p>), ignorando menus,
+    rodapés, scripts e parágrafos curtos de interface."""
+
+    _SKIP = {"script", "style", "nav", "footer", "aside", "header", "form", "noscript"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._skip_depth = 0
+        self._article_depth = 0
+        self._in_p = False
+        self._buf: list[str] = []
+        self.article_paragraphs: list[str] = []
+        self.all_paragraphs: list[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self._SKIP:
+            self._skip_depth += 1
+        elif tag == "article":
+            self._article_depth += 1
+        elif tag == "p" and not self._skip_depth:
+            self._in_p, self._buf = True, []
+
+    def handle_endtag(self, tag):
+        if tag in self._SKIP and self._skip_depth:
+            self._skip_depth -= 1
+        elif tag == "article" and self._article_depth:
+            self._article_depth -= 1
+        elif tag == "p" and self._in_p:
+            self._in_p = False
+            text = _WS_RE.sub(" ", "".join(self._buf)).strip()
+            if len(text) >= 40:
+                self.all_paragraphs.append(text)
+                if self._article_depth:
+                    self.article_paragraphs.append(text)
+
+    def handle_data(self, data):
+        if self._in_p and not self._skip_depth:
+            self._buf.append(data)
+
+
+def _extract_article_text(page_html: str) -> str:
+    parser = _ArticleTextParser()
+    parser.feed(page_html)
+    paragraphs = parser.article_paragraphs or parser.all_paragraphs
+    text = " ".join(paragraphs)
+    if len(text) > MAX_SUMMARY_CHARS:
+        text = text[:MAX_SUMMARY_CHARS].rsplit(" ", 1)[0] + "…"
+    return text
+
+
+def fetch_article_text(url: str, timeout: float = ARTICLE_FETCH_TIMEOUT) -> str:
+    """Baixa a página da matéria e devolve o texto dos parágrafos, ou "" em
+    qualquer falha (bloqueio, timeout, HTML sem parágrafos) — o chamador
+    segue com o texto do RSS."""
+    try:
+        response = httpx.get(
+            url,
+            headers={"User-Agent": _BROWSER_UA, "Accept-Language": "en,pt;q=0.8"},
+            timeout=timeout,
+            follow_redirects=True,
+        )
+        response.raise_for_status()
+        return _extract_article_text(response.text)
+    except Exception as exc:
+        logger.info("Sem texto completo de %s (%s) — usando o resumo do RSS", url, exc)
+        return ""
+
+
+def enrich_with_full_text(articles: list[Article]) -> list[Article]:
+    """Para cada notícia cujo texto do RSS é curto (< MIN_RSS_TEXT_CHARS),
+    tenta trocá-lo pelo texto da matéria — só se o da página for de fato
+    maior. Chamado só nas notícias já selecionadas (poucas requisições)."""
+    enriched: list[Article] = []
+    for article in articles:
+        if len(article.summary) < MIN_RSS_TEXT_CHARS:
+            full_text = fetch_article_text(article.url)
+            if len(full_text) > len(article.summary):
+                article = replace(article, summary=full_text)
+        enriched.append(article)
+    return enriched
 
 
 def _parse_published(entry) -> datetime | None:
