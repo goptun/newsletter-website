@@ -38,6 +38,8 @@ class TestCuriosidadePrompts(unittest.TestCase):
         self.assertIn("1. (1995) Java released.", user)
         self.assertIn("2. (1969) ARPANET starts.", user)
         self.assertIn("tecnologia", system)
+        self.assertIn("exploração espacial", system)
+        self.assertIn("militares", system)
 
     def test_write_prompt_forbids_date_and_extra_details(self):
         system, user = curiosidade_write_prompt(HistoricalEvent(1995, "Java released."))
@@ -59,6 +61,7 @@ class TestNewsAndSubjectPrompts(unittest.TestCase):
         self.assertIn("As informações são do site BleepingComputer.", system)
         self.assertIn("no máximo 8 palavras", system)
         self.assertIn("2 a 4 frases", system)
+        self.assertIn("passo a passo", system)
         self.assertIn("Texto da fonte.", user)
 
     def test_subject_prompt_asks_short_professional_subject(self):

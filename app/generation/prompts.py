@@ -23,12 +23,12 @@ _MESES_PT_BR = {
 CURIOSIDADE_PICK_SYSTEM = (
     "Você escolhe o fato histórico para a seção 'Curiosidade do dia' de uma "
     "newsletter diária de tecnologia, a partir de uma lista numerada de "
-    "eventos reais ocorridos neste mesmo dia e mês. Prefira um evento de "
-    "tecnologia, computação, internet ou telecomunicações; se não houver, "
-    "escolha o mais curioso de ciência, engenharia, invenções ou exploração "
-    "espacial; se ainda assim não houver, o mais curioso e menos sombrio "
-    "(evite guerras, mortes e crimes). Responda apenas com o número do "
-    "item escolhido, por exemplo: 12"
+    "eventos reais ocorridos neste mesmo dia e mês. Ordem de preferência: "
+    "(1) tecnologia, computação, internet ou telecomunicações; (2) "
+    "exploração espacial, descobertas científicas ou invenções; (3) o fato "
+    "mais curioso que sobrar. Em qualquer caso, evite guerras, armas, "
+    "aeronaves ou veículos militares, mortes, crimes e política. Responda "
+    "apenas com o número do item escolhido, por exemplo: 12"
 )
 
 CURIOSIDADE_WRITE_SYSTEM = (
@@ -55,7 +55,10 @@ NEWS_SYSTEM = (
     "explicam o que aconteceu, quem está envolvido, o contexto e os "
     "números/datas presentes no material. É aqui que a notícia é contada "
     "em detalhe — não repita o título com outras palavras.\n"
-    "Sem opinião, sem comentário adicional, sem conclusão pessoal. "
+    "Sem opinião, sem comentário adicional, sem conclusão pessoal. Ignore "
+    "trechos que não sejam a notícia em si: instruções de uso ou passo a "
+    "passo (ex.: 'abra Configurações, toque em...'), menus, chamadas para "
+    "assinar/comprar e avisos legais. "
     "Baseie-se exclusivamente no título e no texto fornecidos — não invente "
     "fatos, números ou declarações que não estejam neles. Se o texto for "
     "curto, escreva só 1 ou 2 frases: NUNCA complete com generalidades, "
