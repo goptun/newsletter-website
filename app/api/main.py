@@ -17,6 +17,7 @@ from app.api import dependencies
 from app.api.routes_public import router as public_router
 from app.api.routes_review import router as review_router
 from app.api.routes_subscribe import router as subscribe_router
+from app.config.settings import settings
 from app.scheduler import start_scheduler
 
 
@@ -28,7 +29,13 @@ async def lifespan(app: FastAPI):
     app.state.scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title="newsletter-website", lifespan=lifespan)
+app = FastAPI(
+    title="newsletter-website",
+    lifespan=lifespan,
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+)
 
 
 @app.get("/health")

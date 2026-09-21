@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     newsletter_owner_email: str = ""
     review_base_url: str = "http://127.0.0.1:8001"
 
+    # Swagger UI / OpenAPI públicos (/docs, /redoc, /openapi.json): desligados
+    # por padrão — em produção só revelariam a superfície da API (rotas de
+    # revisão inclusive). Ligue com ENABLE_DOCS=true no .env pra desenvolver.
+    enable_docs: bool = False
+
     # Revisão/aprovação do draft — protegida por token secreto (ver
     # design.md Decision: "secret-link-protected endpoint")
     review_secret_token: str = ""
