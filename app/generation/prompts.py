@@ -1,5 +1,5 @@
 """Prompts para geração da edição diária — estrutura fixa (assunto curto,
-Curiosidade do dia, um parágrafo por notícia com título curto em negrito +
+Curiosidade do dia (fato real da Wikipedia, ver app/news/history.py), um parágrafo por notícia com título curto em negrito +
 desenvolvimento + atribuição de fonte), sem propaganda e sem comentário
 editorial de cada notícia (ver
 specs/newsletter/content-generation/spec.md)."""
@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import date
 
 from app.news.feeds import Article
+from app.news.history import HistoricalEvent
 
 # `date.strftime("%B")` depende do locale do sistema — o container de produção
 # só tem C/C.utf8/POSIX instalados (sem pt_BR), então isso sempre devolveria o
@@ -19,18 +20,27 @@ _MESES_PT_BR = {
     9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
 }
 
-CURIOSIDADE_SYSTEM = (
+CURIOSIDADE_PICK_SYSTEM = (
+    "Você escolhe o fato histórico para a seção 'Curiosidade do dia' de uma "
+    "newsletter diária de tecnologia, a partir de uma lista numerada de "
+    "eventos reais ocorridos neste mesmo dia e mês. Prefira um evento de "
+    "tecnologia, computação, internet ou telecomunicações; se não houver, "
+    "escolha o mais curioso de ciência, engenharia, invenções ou exploração "
+    "espacial; se ainda assim não houver, o mais curioso e menos sombrio "
+    "(evite guerras, mortes e crimes). Responda apenas com o número do "
+    "item escolhido, por exemplo: 12"
+)
+
+CURIOSIDADE_WRITE_SYSTEM = (
     "Você escreve a seção 'Curiosidade do dia' de uma newsletter diária de "
-    "tecnologia. Gere UM parágrafo curto (1-2 frases) exatamente no formato "
-    "'Curiosidade do dia: Em {data} de <ano>, <fato real e verificável de "
-    "história da tecnologia/computação que aconteceu nesse dia e mês>.' — "
-    "'<ano>' é o ano em que o fato ocorreu, nunca o ano atual. Só use um "
-    "fato cuja data exata (dia, mês e ano) você conhece com certeza; se "
-    "hesitar, escolha outro marco menos famoso, mas certo — nunca aproxime "
-    "a data nem misture eventos. Não inclua "
-    "nenhuma propaganda, call-to-action ou frase de transição do tipo 'E "
-    "após as notícias de hoje'. Responda só com o parágrafo, em português "
-    "do Brasil."
+    "tecnologia. A partir do fato histórico fornecido, escreva 1 ou 2 frases "
+    "curtas em português do Brasil que descrevam o fato. Comece direto pelo "
+    "fato: a data ('Em <dia> de <mês> de <ano>,') é adicionada depois, então "
+    "NÃO escreva data, ano nem 'Curiosidade do dia' — a primeira letra deve "
+    "ser minúscula, a menos que seja nome próprio. Baseie-se exclusivamente "
+    "no texto fornecido: não acrescente detalhes, números, causas ou contexto "
+    "que não estejam nele. Sem propaganda nem call-to-action. Responda só "
+    "com o texto."
 )
 
 NEWS_SYSTEM = (
@@ -65,13 +75,17 @@ SUBJECT_SYSTEM = (
 )
 
 
-def curiosidade_prompt(today: date) -> tuple[str, str]:
-    # Só dia e mês: o ano atual não entra no prompt pra não vazar pro texto
-    # ("Em 21 de setembro de 1995, ..." — o ano é o do fato histórico).
-    formatted = f"{today.day} de {_MESES_PT_BR[today.month]}"
-    system = CURIOSIDADE_SYSTEM.format(data=formatted)
-    user = f"Hoje é {formatted}."
-    return system, user
+def format_day_month(today: date) -> str:
+    return f"{today.day} de {_MESES_PT_BR[today.month]}"
+
+
+def curiosidade_pick_prompt(events: list[HistoricalEvent]) -> tuple[str, str]:
+    lines = [f"{i}. ({e.year}) {e.text[:200]}" for i, e in enumerate(events, start=1)]
+    return CURIOSIDADE_PICK_SYSTEM, "Eventos deste dia:\n" + "\n".join(lines)
+
+
+def curiosidade_write_prompt(event: HistoricalEvent) -> tuple[str, str]:
+    return CURIOSIDADE_WRITE_SYSTEM, f"Ano: {event.year}\nFato: {event.text}"
 
 
 def news_item_prompt(article: Article) -> tuple[str, str]:

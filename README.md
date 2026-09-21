@@ -14,7 +14,7 @@ flowchart LR
     end
 
     subgraph Geracao["Geração via LLM (9Router)"]
-        C --> D["Assunto + Curiosidade do dia<br/>+ 1 parágrafo por notícia"]
+        C --> D["Assunto + Curiosidade do dia (Wikipedia)<br/>+ 1 parágrafo por notícia"]
         D --> E["Validação determinística<br/>sem propaganda, com atribuição de fonte"]
     end
 
@@ -51,7 +51,8 @@ flowchart LR
 - **API**: FastAPI + Uvicorn
 - **Armazenamento**: SQLite (assinantes e edições, sem ORM)
 - **Agendamento**: APScheduler (job diário in-process, sem cron externo)
-- **Notícias**: feedparser (RSS)
+- **Notícias**: feedparser (RSS) + texto completo da matéria quando o RSS é curto
+- **Curiosidade do dia**: eventos reais da API "On this day" da Wikipedia (o LLM só escolhe e reescreve)
 - **LLM**: 9Router (gateway OpenAI-compatible, mesmo padrão de integração usado no `rag-knowledge-assistant`)
 - **Envio**: Resend (e-mail transacional), com One-Click Unsubscribe (RFC 8058)
 - **Deploy**: Docker Compose numa VPS Oracle Cloud, atrás de Nginx + Cloudflare

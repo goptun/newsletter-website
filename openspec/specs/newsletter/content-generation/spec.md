@@ -14,14 +14,18 @@ The system SHALL generate one draft edition per day automatically on a schedule,
 - **THEN** the system collects candidate news items and produces one draft edition stored for review
 
 ### Requirement: Real, sourced news only
-The system SHALL only include news items backed by an actually fetched source, and SHALL NOT fabricate news, facts, sources, or links.
+The system SHALL only include news items and historical facts backed by an actually fetched source, and SHALL NOT fabricate news, facts, sources, or links.
+
+#### Scenario: Historical source unavailable
+- **WHEN** the historical-events source cannot be reached after retries
+- **THEN** the system does not invent a "Curiosidade do dia" and marks the draft as incomplete for manual attention
 
 #### Scenario: No real news available
 - **WHEN** no relevant, verifiable news items can be retrieved for the day
 - **THEN** the system does not fabricate content and instead marks the draft as incomplete/failed for manual attention
 
 ### Requirement: Reference structure compliance
-Each draft SHALL contain: a short, professional subject line (at most ~60 characters, no trailing period) highlighting 1-2 top stories, an opening paragraph in the form "Curiosidade do dia: Em <day> de <month> de <historical year>, ...", followed by one paragraph per selected news item. Each news paragraph SHALL start with a short headline (at most ~8 words, no colon), followed by a colon and a detailed body of 2-4 sentences that tells the story without repeating the headline, and end with a sentence attributing the original source.
+Each draft SHALL contain: a short, professional subject line (at most ~60 characters, no trailing period) highlighting 1-2 top stories, an opening paragraph in the form "Curiosidade do dia: Em <day> de <month> de <historical year>, ..." built from a real event of that day/month fetched from Wikipedia's "On this day" feed (the year comes from the source, never from the LLM), followed by one paragraph per selected news item. Each news paragraph SHALL start with a short headline (at most ~8 words, no colon), followed by a colon and a detailed body of 2-4 sentences that tells the story without repeating the headline, and end with a sentence attributing the original source.
 
 #### Scenario: Draft follows structure
 - **WHEN** a draft is generated

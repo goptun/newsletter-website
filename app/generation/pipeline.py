@@ -9,10 +9,17 @@ import sqlite3
 from datetime import date
 
 from app.generation.llm_client import NineRouterClient
-from app.generation.prompts import curiosidade_prompt, news_item_prompt, subject_prompt
+from app.generation.prompts import (
+    curiosidade_pick_prompt,
+    curiosidade_write_prompt,
+    format_day_month,
+    news_item_prompt,
+    subject_prompt,
+)
 from app.generation.relevance import select_relevant
 from app.generation.validation import DraftValidationError, validate_draft
 from app.news.feeds import enrich_with_full_text, fetch_candidates
+from app.news.history import HistoricalEvent, fetch_events
 from app.news.selection import select
 from app.storage import editions as editions_store
 
@@ -20,19 +27,44 @@ logger = logging.getLogger("newsletter.generation")
 
 
 CURIOSIDADE_PREFIX = "Curiosidade do dia:"
-_CURIOSIDADE_LEAD_RE = re.compile(r"^\s*curiosidade[^:\n]{0,60}:\s*", re.IGNORECASE)
+_FIRST_INT_RE = re.compile(r"\d+")
+_LEADING_ARTICLES = {"O", "A", "Os", "As", "Um", "Uma", "Uns", "Umas"}
+# O modelo às vezes usa hífen não separável (U+2011) e espaços especiais
+# ("0‑day", "US$ 249") que renderizam mal em algumas fontes de e-mail.
+_TYPOGRAPHY_FIXES = str.maketrans(
+    {"\u2010": "-", "\u2011": "-", "\u00a0": " ", "\u202f": " ", "\u2009": " "}
+)
 
 
-def _normalize_curiosidade(text: str) -> str:
-    """Garante o rótulo fixo 'Curiosidade do dia: ' no início — o LLM às
-    vezes escreve 'Curiosidade para o dia <data>: ...' mesmo com o prompt
-    pedindo o formato curto. Corrigir aqui (em vez de reprovar na
-    validação) evita descartar a edição inteira por um detalhe de rótulo.
-    Texto vazio passa direto pra validate_draft reportar."""
-    text = text.strip()
-    if not text:
-        return text
-    return f"{CURIOSIDADE_PREFIX} {_CURIOSIDADE_LEAD_RE.sub('', text, count=1)}"
+def _normalize_typography(text: str) -> str:
+    return text.translate(_TYPOGRAPHY_FIXES)
+
+
+def _build_curiosidade(
+    llm_client: NineRouterClient, today: date, events: list[HistoricalEvent]
+) -> str:
+    """Curiosidade do dia a partir de um evento real da Wikipedia: o LLM só
+    escolhe o evento e reescreve o fato em português; o prefixo com dia, mês
+    e ANO vem do código (o ano é o do evento, nunca gerado pelo modelo)."""
+    if not events:
+        raise DraftValidationError(["Nenhum evento histórico disponível para a Curiosidade do dia"])
+
+    pick_system, pick_user = curiosidade_pick_prompt(events)
+    match = _FIRST_INT_RE.search(_complete_nonempty(llm_client, pick_system, pick_user))
+    if not match or not 1 <= int(match.group()) <= len(events):
+        raise DraftValidationError(["Curiosidade do dia: escolha de evento inválida"])
+    event = events[int(match.group()) - 1]
+
+    write_system, write_user = curiosidade_write_prompt(event)
+    fact = _complete_nonempty(llm_client, write_system, write_user)
+    if not fact:
+        return ""  # validate_draft reporta a seção vazia
+    first_word, _, rest = fact.partition(" ")
+    if first_word in _LEADING_ARTICLES:
+        fact = f"{first_word.lower()} {rest}"
+    if not fact.endswith((".", "!", "?")):
+        fact += "."
+    return f"{CURIOSIDADE_PREFIX} Em {format_day_month(today)} de {event.year}, {fact}"
 
 
 def _clean_subject(text: str) -> str:
@@ -45,25 +77,22 @@ def _complete_nonempty(llm_client: NineRouterClient, system: str, user: str, ret
     orçamento de tokens "pensando" antes do conteúdo final (ver
     settings.generation_max_tokens), o que derrubava a edição inteira pra
     'incomplete' mesmo havendo notícia real disponível."""
-    result = llm_client.complete(system, user).strip()
+    result = _normalize_typography(llm_client.complete(system, user)).strip()
     attempts = 0
     while not result and attempts < retries:
         attempts += 1
-        result = llm_client.complete(system, user).strip()
+        result = _normalize_typography(llm_client.complete(system, user)).strip()
     return result
 
 
 def _generate_once(
-    llm_client: NineRouterClient, today: date, selected: list
+    llm_client: NineRouterClient, today: date, selected: list, events: list[HistoricalEvent]
 ) -> tuple[str, str, list[str]]:
     """Uma passada de geração (assunto, curiosidade, parágrafos de notícia).
     Levanta DraftValidationError se o resultado não passar em validate_draft,
     ou a exceção original do LLM em caso de falha de chamada — quem chama
     decide se tenta de novo (ver generate_daily_edition)."""
-    curiosidade_system, curiosidade_user = curiosidade_prompt(today)
-    curiosidade = _normalize_curiosidade(
-        _complete_nonempty(llm_client, curiosidade_system, curiosidade_user)
-    )
+    curiosidade = _build_curiosidade(llm_client, today, events)
 
     news_paragraphs = []
     for article in selected:
@@ -120,9 +149,14 @@ def generate_daily_edition(
     # e-mail de "geração falhou" — mesmo havendo notícia real disponível e
     # uma boa chance de a próxima tentativa dar certo.
     last_error: str | None = None
+    events: list[HistoricalEvent] | None = None
     for attempt in range(1, max_attempts + 1):
         try:
-            subject, curiosidade, news_paragraphs = _generate_once(llm_client, today, selected)
+            if events is None:
+                events = fetch_events(today)
+            subject, curiosidade, news_paragraphs = _generate_once(
+                llm_client, today, selected, events
+            )
             body = curiosidade + "\n\n" + "\n\n".join(news_paragraphs)
             return editions_store.create_draft(conn, today.isoformat(), subject, body)
         except DraftValidationError as exc:
@@ -132,7 +166,7 @@ def generate_daily_edition(
             # LLM), essas chamadas não têm como seguir sem resposta do
             # modelo — mas vale tentar de novo antes de desistir (ver
             # comentário do loop acima).
-            last_error = f"Falha ao chamar o LLM durante a geração do conteúdo: {exc}"
+            last_error = f"Falha durante a geração do conteúdo (LLM ou fontes): {exc}"
         logger.warning(
             "Tentativa %d/%d de gerar a edição de %s falhou: %s",
             attempt,
