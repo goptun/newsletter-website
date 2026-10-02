@@ -85,6 +85,9 @@ def render_page(title: str, body_html: str, css_href: str) -> str:
         "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         f"<title>{escape(title)}</title>"
+        # Ícones servidos pelo portfolio-website (mesmo domínio).
+        '<link rel="icon" href="/favicon.ico" sizes="48x48">'
+        '<link rel="icon" type="image/svg+xml" href="/favicon.svg">'
         '<script src="/theme-init.js"></script>'
         '<link rel="stylesheet" href="/fonts/fonts.css">'
         f'<link rel="stylesheet" href="{escape(css_href)}">'
