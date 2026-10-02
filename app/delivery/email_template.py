@@ -17,15 +17,20 @@ from urllib.parse import quote
 
 UNSUBSCRIBE_URL_BASE = "https://matheusramos.dev/api/newsletter/unsubscribe"
 
+# Cores: hex da paleta clara do portfolio-website (src/styles/global.css),
+# escritos direto porque clientes de e-mail não suportam variáveis CSS.
+# Sem tema escuro próprio: o suporte a prefers-color-scheme em e-mail é
+# irregular, e os clientes que forçam modo escuro invertem essas cores.
+
 _CONTAINER_STYLE = (
     "max-width:600px;margin:0 auto;padding:24px 16px;"
-    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
-    "color:#111110;line-height:1.6;"
+    "font-family:'Noto Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
+    "color:#0B0E13;line-height:1.6;"
 )
-_CURIOSIDADE_STYLE = "font-size:13px;color:#6b6a67;font-style:italic;margin:0 0 22px;"
+_CURIOSIDADE_STYLE = "font-size:13px;color:#4A5563;font-style:italic;margin:0 0 22px;"
 _PARAGRAPH_STYLE = "margin:0 0 18px;font-size:15px;"
-_FOOTER_STYLE = "font-size:12px;color:#9a9a96;margin:0;"
-_LINK_STYLE = "color:#9a9a96;"
+_FOOTER_STYLE = "font-size:12px;color:#626D7A;margin:0;"
+_LINK_STYLE = "color:#047857;"
 
 
 def unsubscribe_url_for(email: str) -> str:
@@ -70,7 +75,7 @@ def render_edition_html(body: str, unsubscribe_email: str) -> str:
         f'<div style="{_CONTAINER_STYLE}">'
         f'<p style="{_CURIOSIDADE_STYLE}">{escape(curiosidade)}</p>'
         f"{news_html}"
-        f'<hr style="border:none;border-top:1px solid #e6e4e0;margin:28px 0 16px;">'
+        f'<hr style="border:none;border-top:1px solid #DDE3E8;margin:28px 0 16px;">'
         f'<p style="{_FOOTER_STYLE}">Você está recebendo porque assinou em '
         f'matheusramos.dev. <a href="{escape(unsubscribe_url)}" style="{_LINK_STYLE}">'
         "Cancelar inscrição</a></p>"

@@ -68,3 +68,26 @@ class TestLatestEdition(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPagesStylesheet(unittest.TestCase):
+    """As páginas HTML linkam esta folha (a CSP do domínio bloqueia <style>
+    inline) por caminho relativo — ver app/api/review_html.py."""
+
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_serves_css(self):
+        response = self.client.get("/assets/pages.css")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/css", response.headers["content-type"])
+        self.assertIn("--accent", response.text)
+
+    def test_relative_hrefs_resolve_to_the_stylesheet_from_each_page(self):
+        from urllib.parse import urljoin
+
+        base = "https://matheusramos.dev/api/newsletter/"
+        target = base + "assets/pages.css"
+        self.assertEqual(urljoin(base + "review/page", "../assets/pages.css"), target)
+        self.assertEqual(urljoin(base + "review/7/approve", "../../assets/pages.css"), target)
+        self.assertEqual(urljoin(base + "unsubscribe", "assets/pages.css"), target)

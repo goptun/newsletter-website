@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from app.api.dependencies import get_db
+from app.api.review_html import render_page
 from app.storage import subscribers as subscribers_store
 
 router = APIRouter()
@@ -48,9 +49,9 @@ def unsubscribe_via_link(email: str = Query(...), conn=Depends(get_db)) -> HTMLR
     todo mundo, que exige POST (ver app/api/routes_review.py)."""
     subscribers_store.unsubscribe(conn, email)
     return HTMLResponse(
-        "<!doctype html><html lang=\"pt-BR\"><head><meta charset=\"utf-8\">"
-        "<title>Inscrição cancelada</title></head>"
-        "<body style=\"font-family:-apple-system,sans-serif;max-width:32rem;margin:3rem auto;padding:0 1rem;\">"
-        "<p>Sua inscrição foi cancelada. Você não vai mais receber a newsletter.</p>"
-        "</body></html>"
+        render_page(
+            "Inscrição cancelada",
+            "<p>Sua inscrição foi cancelada. Você não vai mais receber a newsletter.</p>",
+            "assets/pages.css",
+        )
     )
