@@ -23,17 +23,17 @@ export DEPLOY_HOST=ubuntu@<VPS_HOST_IP>
 export DEPLOY_KEY=~/Desktop/<sua-chave-ssh>.key
 
 # 1. Envia o código pra VPS (ou faz git pull lá, se o repo já estiver clonado)
-rsync -az --exclude .venv --exclude data -e "ssh -i $DEPLOY_KEY" ./ "$DEPLOY_HOST:~/newsletter-website/"
+rsync -az --exclude .venv --exclude data -e "ssh -i $DEPLOY_KEY" ./ "$DEPLOY_HOST:~/projects/newsletter-website/"
 
 # 2. Garante o .env configurado na VPS (LLM_BASE_URL já deve apontar pro
 #    9Router existente na rede Tailscale — ver .env.example pro formato).
 #    RESEND_API_KEY e REVIEW_SECRET_TOKEN são obrigatórios pra
 #    geração/envio funcionarem de verdade.
-ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" "test -f ~/newsletter-website/.env || echo 'FALTA CRIAR .env NA VPS'"
+ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" "test -f ~/projects/newsletter-website/.env || echo 'FALTA CRIAR .env NA VPS'"
 
 # 3. Builda e sobe (ou atualiza) o container
 ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" \
-  "cd ~/newsletter-website && docker compose -f docker/docker-compose.yml up -d --build"
+  "cd ~/projects/newsletter-website && docker compose -f docker/docker-compose.yml up -d --build"
 ```
 
 ## Rollback
@@ -43,7 +43,7 @@ stack, sem tocar nos demais serviços da VPS.
 
 ```bash
 ssh -i "$DEPLOY_KEY" "$DEPLOY_HOST" \
-  "cd ~/newsletter-website && docker compose -f docker/docker-compose.yml down"
+  "cd ~/projects/newsletter-website && docker compose -f docker/docker-compose.yml down"
 ```
 
 Pra voltar a uma versão anterior do código: `git checkout <commit-anterior>`
