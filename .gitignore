@@ -14,3 +14,6 @@ data/
 
 # macOS
 .DS_Store
+
+# Personal Claude Code permissions
+.claude/settings.local.json
